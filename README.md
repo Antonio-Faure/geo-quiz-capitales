@@ -16,18 +16,9 @@ Accessible via GitHub Pages à l'URL de votre repo.
   - ☀️ **Thème clair** (défaut sur les autres navigateurs)
   - 🌙 **Thème bleu nuit** (bascule avec le bouton en haut à droite)
 
-## Structure
-
-```
-├── index.html                  # Application quiz
-└── pays_capitales_funfacts.csv # Données (46 pays, capitales, funfacts)
-```
-
 ## Déploiement GitHub Pages
 
-1. Pushez les deux fichiers à la racine du repo
-2. Settings → Pages → Source : **main branch / root**
-3. Le site est disponible sur `https://<user>.github.io/<repo>`
+Le site est disponible sur `https://antonio-faure.github.io/geo-quiz-capitales`
 
 ## Données
 
