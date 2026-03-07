@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GéoQuiz — Capitales du monde</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ─── DESIGN TOKENS ──────────────────────────────────────────── */
+    :root {
+      /* Chrome / Bordeaux palette (défaut si Chrome détecté) */
+      --c-bg:        #30191E;
+      --c-surface:   #4F3439;
+      --c-card:      #3d2228;
+      --c-border:    #6B4C51;
+      --c-accent:    #e94560;
+      --c-accent2:   #f7b2be;
+      --c-text:      #f5e6e8;
+      --c-muted:     #c9a0a7;
+      --c-correct:   #4dbb87;
+      --c-wrong:     #e94560;
+      --c-shadow:    rgba(233,69,96,0.18);
+      --font-display:'Playfair Display', Georgia, serif;
+      --font-body:   'DM Sans', sans-serif;
+      --radius:       14px;
+      --transition:   0.28s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Thème clair */
+    [data-theme="light"] {
+      --c-bg:      #fdf6f0;
+      --c-surface: #ffffff;
+      --c-card:    #fff8f5;
+      --c-border:  #e8d5cc;
+      --c-accent:  #c0392b;
+      --c-accent2: #e8846f;
+      --c-text:    #2c1a14;
+      --c-muted:   #8a5e56;
+      --c-correct: #27ae60;
+      --c-wrong:   #c0392b;
+      --c-shadow:  rgba(192,57,43,0.12);
+    }
+
+    /* Thème sombre bleu nuit */
+    [data-theme="dark"] {
+      --c-bg:      #0d1117;
+      --c-surface: #161b22;
+      --c-card:    #1c2128;
+      --c-border:  #30363d;
+      --c-accent:  #58a6ff;
+      --c-accent2: #a5d0ff;
+      --c-text:    #e6edf3;
+      --c-muted:   #8b949e;
+      --c-correct: #3fb950;
+      --c-wrong:   #f85149;
+      --c-shadow:  rgba(88,166,255,0.12);
+    }
+
+    /* ─── RESET & BASE ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ─── BACKGROUND TEXTURE ─────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, color-mix(in srgb, var(--c-accent) 8%, transparent) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, color-mix(in srgb, var(--c-border) 15%, transparent) 0%, transparent 60%);
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────────────── */
+    .app {
+      position: relative; z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 1.6rem; font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .logo span { color: var(--c-accent); }
+
+    .header-controls { display: flex; gap: .6rem; align-items: center; }
+
+    /* Theme toggle — hidden sur Chrome */
+    .theme-btn {
+      background: var(--c-surface);
+      border: 1.5px solid var(--c-border);
+      color: var(--c-muted);
+      width: 38px; height: 38px;
+      border-radius: 50%; cursor: pointer;
+      font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all var(--transition);
+    }
+    .theme-btn:hover { color: var(--c-accent); border-color: var(--c-accent); }
+    .chrome-badge {
+      font-size: .7rem; font-family: var(--font-body); font-weight: 600;
+      background: color-mix(in srgb, var(--c-accent) 18%, transparent);
+      color: var(--c-accent2);
+      padding: .25rem .6rem; border-radius: 999px;
+      letter-spacing: .04em;
+      border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+    }
+
+    /* ─── SCORE BAR ──────────────────────────────────────────────── */
+    .score-bar {
+      display: flex; gap: 1rem; margin-bottom: 2rem;
+      font-size: .82rem; font-weight: 500; letter-spacing: .03em;
+      color: var(--c-muted); text-transform: uppercase;
+    }
+    .score-bar span { color: var(--c-text); font-size: 1rem; font-weight: 700; }
+
+    /* ─── CARDS ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--c-surface);
+      border: 1.5px solid var(--c-border);
+      border-radius: var(--radius);
+      padding: 2.2rem 2.4rem;
+      box-shadow: 0 4px 32px var(--c-shadow);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    /* ─── MENU ───────────────────────────────────────────────────── */
+    #screen-menu .subtitle {
+      font-size: .9rem; color: var(--c-muted);
+      margin-bottom: 2rem; line-height: 1.6;
+    }
+    #screen-menu h2 {
+      font-family: var(--font-display);
+      font-size: 2rem; font-weight: 700; margin-bottom: .5rem;
+    }
+
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.6rem; }
+
+    .mode-card {
+      background: var(--c-card);
+      border: 2px solid var(--c-border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.2rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+    .mode-card:hover, .mode-card.selected {
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 18%, transparent);
+    }
+    .mode-card .icon { font-size: 2rem; margin-bottom: .6rem; }
+    .mode-card h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: .3rem; }
+    .mode-card p { font-size: .78rem; color: var(--c-muted); line-height: 1.4; }
+
+    /* ─── BOUTONS ────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .85rem 2rem;
+      border-radius: 999px;
+      font-family: var(--font-body); font-size: .9rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all var(--transition);
+      letter-spacing: .02em;
+    }
+    .btn-primary {
+      background: var(--c-accent); color: #fff;
+      box-shadow: 0 4px 18px color-mix(in srgb, var(--c-accent) 35%, transparent);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 6px 24px color-mix(in srgb, var(--c-accent) 45%, transparent);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      background: transparent; color: var(--c-muted);
+      border: 1.5px solid var(--c-border);
+    }
+    .btn-ghost:hover { color: var(--c-text); border-color: var(--c-accent); }
+    .btn:disabled { opacity: .45; pointer-events: none; }
+    .btn-full { width: 100%; }
+
+    /* ─── QUIZ ───────────────────────────────────────────────────── */
+    .progress-wrap {
+      height: 4px; background: var(--c-border);
+      border-radius: 999px; overflow: hidden; margin-bottom: 2rem;
+    }
+    .progress-fill {
+      height: 100%; background: var(--c-accent);
+      border-radius: 999px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+
+    .question-label {
+      font-size: .72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--c-muted); margin-bottom: .8rem;
+    }
+
+    .question-text {
+      font-family: var(--font-display);
+      font-size: 1.75rem; font-weight: 700; line-height: 1.25;
+      margin-bottom: .4rem;
+    }
+    .question-hint {
+      font-size: .8rem; color: var(--c-muted); margin-bottom: 1.8rem;
+    }
+
+    .answers { display: grid; gap: .8rem; }
+
+    .answer-btn {
+      background: var(--c-card);
+      border: 2px solid var(--c-border);
+      border-radius: var(--radius);
+      padding: 1rem 1.4rem;
+      text-align: left; cursor: pointer;
+      font-family: var(--font-body); font-size: .95rem; font-weight: 500;
+      color: var(--c-text);
+      transition: all var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .answer-btn::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+      background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+      transition: width var(--transition);
+    }
+    .answer-btn:hover:not(:disabled)::before { width: 100%; }
+    .answer-btn:hover:not(:disabled) { border-color: var(--c-accent); }
+
+    .answer-btn.correct {
+      border-color: var(--c-correct);
+      background: color-mix(in srgb, var(--c-correct) 12%, var(--c-card));
+      color: var(--c-correct);
+    }
+    .answer-btn.wrong {
+      border-color: var(--c-wrong);
+      background: color-mix(in srgb, var(--c-wrong) 12%, var(--c-card));
+      color: var(--c-wrong);
+    }
+    .answer-btn .letter {
+      display: inline-block; width: 1.6rem; height: 1.6rem;
+      border-radius: 50%; background: var(--c-border);
+      font-size: .7rem; font-weight: 700; line-height: 1.6rem;
+      text-align: center; margin-right: .6rem;
+      vertical-align: middle;
+    }
+
+    /* ─── FEEDBACK FUNFACT ───────────────────────────────────────── */
+    .feedback {
+      margin-top: 1.4rem;
+      padding: 1.2rem 1.4rem;
+      background: color-mix(in srgb, var(--c-accent) 8%, var(--c-card));
+      border-left: 3px solid var(--c-accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      animation: slideUp .3s ease;
+    }
+    .feedback-status {
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; margin-bottom: .5rem;
+    }
+    .feedback-status.ok { color: var(--c-correct); }
+    .feedback-status.ko { color: var(--c-wrong); }
+    .feedback-funfact {
+      font-size: .88rem; line-height: 1.6; color: var(--c-muted);
+    }
+    .feedback-funfact strong { color: var(--c-text); }
+
+    .next-row {
+      display: flex; justify-content: flex-end; margin-top: 1.2rem;
+    }
+
+    /* ─── RÉSULTATS ──────────────────────────────────────────────── */
+    #screen-result { text-align: center; }
+    #screen-result .trophy { font-size: 4rem; margin-bottom: 1rem; }
+    #screen-result h2 {
+      font-family: var(--font-display); font-size: 2.2rem; font-weight: 900;
+      margin-bottom: .5rem;
+    }
+    #screen-result .score-big {
+      font-size: 4rem; font-weight: 900; color: var(--c-accent);
+      font-family: var(--font-display); line-height: 1;
+      margin: 1rem 0;
+    }
+    #screen-result .score-label { color: var(--c-muted); font-size: .9rem; margin-bottom: 2rem; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-bottom: 2rem; }
+    .result-stat {
+      background: var(--c-card); border: 1.5px solid var(--c-border);
+      border-radius: var(--radius); padding: 1rem;
+    }
+    .result-stat .val { font-size: 1.8rem; font-weight: 800; color: var(--c-accent); }
+    .result-stat .lbl { font-size: .75rem; color: var(--c-muted); margin-top: .2rem; }
+
+    /* ─── ANIMATIONS ─────────────────────────────────────────────── */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn .35s ease; }
+
+    /* ─── LOADING ────────────────────────────────────────────────── */
+    #loading {
+      text-align: center; padding: 4rem 0;
+      color: var(--c-muted); font-size: .9rem;
+    }
+    .spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid var(--c-border);
+      border-top-color: var(--c-accent);
+      animation: spin .8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 500px) {
+      .mode-grid { grid-template-columns: 1fr; }
+      .question-text { font-size: 1.4rem; }
+      .result-grid { grid-template-columns: 1fr 1fr; }
+      .app { padding: 1.2rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Géo<span>Quiz</span></div>
+    <div class="header-controls" id="header-controls">
+      <!-- injecté par JS -->
+    </div>
+  </header>
+
+  <!-- LOADING -->
+  <div id="loading">
+    <div class="spinner"></div>
+    Chargement des données…
+  </div>
+
+  <!-- MENU -->
+  <div id="screen-menu" class="screen card">
+    <h2>Capitales du monde</h2>
+    <p class="subtitle">Testez vos connaissances géographiques sur les capitales et découvrez des anecdotes insolites après chaque question.</p>
+
+    <div class="mode-grid">
+      <div class="mode-card selected" data-mode="pays-capitale" onclick="selectMode(this)">
+        <div class="icon">🌍</div>
+        <h3>Pays → Capitale</h3>
+        <p>On vous donne un pays, trouvez sa capitale</p>
+      </div>
+      <div class="mode-card" data-mode="capitale-pays" onclick="selectMode(this)">
+        <div class="icon">🏛️</div>
+        <h3>Capitale → Pays</h3>
+        <p>On vous donne une capitale, trouvez son pays</p>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="btn-start" onclick="startQuiz()">
+      Commencer le quiz →
+    </button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="screen-quiz" class="screen">
+    <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+
+    <div class="score-bar">
+      <div>Question <span id="q-num">1</span> / <span id="q-total">10</span></div>
+      <div>✓ <span id="q-correct">0</span></div>
+      <div>✗ <span id="q-wrong">0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="question-label" id="q-label">Quelle est la capitale de…</div>
+      <div class="question-text" id="q-text"></div>
+      <div class="question-hint" id="q-hint"></div>
+      <div class="answers" id="answers"></div>
+      <div id="feedback-zone"></div>
+      <div class="next-row" id="next-row" style="display:none">
+        <button class="btn btn-primary" onclick="nextQuestion()">Question suivante →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div id="screen-result" class="screen card">
+    <div class="trophy" id="trophy">🏆</div>
+    <h2 id="result-title">Quiz terminé !</h2>
+    <div class="score-big" id="score-big"></div>
+    <div class="score-label" id="score-label"></div>
+    <div class="result-grid">
+      <div class="result-stat"><div class="val" id="res-correct"></div><div class="lbl">Bonnes réponses</div></div>
+      <div class="result-stat"><div class="val" id="res-wrong"></div><div class="lbl">Erreurs</div></div>
+    </div>
+    <div style="display:flex; gap:.8rem; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="restartSameMode()">Rejouer ce mode</button>
+      <button class="btn btn-ghost" onclick="goMenu()">← Changer de mode</button>
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<script>
+// ─── DÉTECTION CHROME ──────────────────────────────────────────────────
+const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+// ─── THÈME ─────────────────────────────────────────────────────────────
+function initTheme() {
+  const controls = document.getElementById('header-controls');
+  if (isChrome) {
+    // Bordeaux forcé, badge affiché
+    document.documentElement.removeAttribute('data-theme');
+    controls.innerHTML = `<span class="chrome-badge">🍷 Chrome Edition</span>`;
+  } else {
+    // Thème clair par défaut, toggle disponible
+    const saved = localStorage.getItem('geoquiz-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    controls.innerHTML = `<button class="theme-btn" id="theme-btn" title="Changer de thème" onclick="toggleTheme()">
+      ${saved === 'dark' ? '☀️' : '🌙'}
+    </button>`;
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('geoquiz-theme', next);
+  document.getElementById('theme-btn').textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+// ─── PARSE CSV ─────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let c = 0; c < lines[i].length; c++) {
+      const ch = lines[i][c];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur);
+    if (cols.length >= 5) {
+      rows.push({
+        pays:     cols[0].trim(),
+        capitale: cols[1].trim(),
+        facts:    [cols[2].trim(), cols[3].trim(), cols[4].trim()]
+      });
+    }
+  }
+  return rows;
+}
+
+// ─── ÉTAT GLOBAL ──────────────────────────────────────────────────────
+let data = [];
+let mode = 'pays-capitale';
+let questions = [];
+let qIndex = 0;
+let correct = 0;
+let wrong = 0;
+const TOTAL_Q = 15;
+
+// ─── CHARGEMENT CSV ───────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch('pays_capitales_funfacts.csv');
+    if (!r.ok) throw new Error('fetch failed');
+    const txt = await r.text();
+    data = parseCSV(txt);
+    document.getElementById('loading').style.display = 'none';
+    showScreen('screen-menu');
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<p style="color:var(--c-wrong)">❌ Impossible de charger le fichier CSV.<br>
+       Assurez-vous que <code>pays_capitales_funfacts.csv</code> est dans le même dossier.</p>`;
+  }
+}
+
+// ─── UTILITAIRES ──────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── MENU ──────────────────────────────────────────────────────────────
+function selectMode(el) {
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  mode = el.dataset.mode;
+}
+
+// ─── GÉNÉRATION QUESTIONS ─────────────────────────────────────────────
+function buildQuestions() {
+  const shuffled = shuffle(data).slice(0, TOTAL_Q);
+  questions = shuffled.map(item => {
+    const isP2C = mode === 'pays-capitale';
+    const question = isP2C ? item.pays : item.capitale;
+    const answer   = isP2C ? item.capitale : item.pays;
+    // 3 distracteurs différents
+    const pool = data.filter(d => (isP2C ? d.capitale : d.pays) !== answer);
+    const distractors = shuffle(pool).slice(0, 3).map(d => isP2C ? d.capitale : d.pays);
+    const choices = shuffle([answer, ...distractors]);
+    const fact = item.facts[Math.floor(Math.random() * 3)];
+    return { question, answer, choices, fact, pays: item.pays };
+  });
+}
+
+// ─── DÉMARRER ─────────────────────────────────────────────────────────
+function startQuiz() {
+  correct = 0; wrong = 0; qIndex = 0;
+  buildQuestions();
+  document.getElementById('q-total').textContent = questions.length;
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
+function restartSameMode() { startQuiz(); }
+function goMenu() { showScreen('screen-menu'); }
+
+// ─── RENDU QUESTION ───────────────────────────────────────────────────
+function renderQuestion() {
+  const q = questions[qIndex];
+  const num = qIndex + 1;
+
+  document.getElementById('q-num').textContent = num;
+  document.getElementById('q-correct').textContent = correct;
+  document.getElementById('q-wrong').textContent = wrong;
+
+  const pct = (qIndex / questions.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  document.getElementById('q-label').textContent =
+    mode === 'pays-capitale' ? 'Quelle est la capitale de…' : 'De quel pays est-ce la capitale ?';
+  document.getElementById('q-text').textContent = q.question;
+  document.getElementById('q-hint').textContent =
+    mode === 'pays-capitale' ? `Trouvez la capitale administrative de ce pays.` : `Identifiez le pays dont c'est la capitale officielle.`;
+
+  const letters = ['A', 'B', 'C', 'D'];
+  const answersEl = document.getElementById('answers');
+  answersEl.innerHTML = q.choices.map((c, i) => `
+    <button class="answer-btn" onclick="selectAnswer(this, '${c.replace(/'/g, "\\'")}')">
+      <span class="letter">${letters[i]}</span>${c}
+    </button>
+  `).join('');
+
+  document.getElementById('feedback-zone').innerHTML = '';
+  document.getElementById('next-row').style.display = 'none';
+}
+
+// ─── SÉLECTION RÉPONSE ────────────────────────────────────────────────
+function selectAnswer(btn, chosen) {
+  const q = questions[qIndex];
+  const isOk = chosen === q.answer;
+
+  if (isOk) correct++; else wrong++;
+  document.getElementById('q-correct').textContent = correct;
+  document.getElementById('q-wrong').textContent = wrong;
+
+  // Colorer les boutons
+  document.querySelectorAll('.answer-btn').forEach(b => {
+    b.disabled = true;
+    const label = b.textContent.slice(1).trim(); // sans la lettre
+    if (label === q.answer) b.classList.add('correct');
+    else if (b === btn && !isOk) b.classList.add('wrong');
+  });
+
+  // Funfact feedback
+  const fb = document.getElementById('feedback-zone');
+  fb.innerHTML = `
+    <div class="feedback">
+      <div class="feedback-status ${isOk ? 'ok' : 'ko'}">
+        ${isOk ? '✓ Bonne réponse !' : `✗ La bonne réponse était : ${q.answer}`}
+      </div>
+      <div class="feedback-funfact">
+        <strong>Le saviez-vous ?</strong> ${q.fact}
+      </div>
+    </div>
+  `;
+
+  // Bouton suivant
+  const nextRow = document.getElementById('next-row');
+  nextRow.style.display = 'flex';
+  const nextBtn = nextRow.querySelector('button');
+  if (qIndex === questions.length - 1) {
+    nextBtn.textContent = 'Voir les résultats 🏁';
+  } else {
+    nextBtn.textContent = 'Question suivante →';
+  }
+}
+
+// ─── QUESTION SUIVANTE ────────────────────────────────────────────────
+function nextQuestion() {
+  qIndex++;
+  if (qIndex >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ─── RÉSULTATS ────────────────────────────────────────────────────────
+function showResults() {
+  const total = questions.length;
+  const pct = Math.round((correct / total) * 100);
+
+  let trophy, title;
+  if (pct === 100)      { trophy = '🏆'; title = 'Parfait !'; }
+  else if (pct >= 80)   { trophy = '🥇'; title = 'Excellent !'; }
+  else if (pct >= 60)   { trophy = '🥈'; title = 'Bien joué !'; }
+  else if (pct >= 40)   { trophy = '🥉'; title = 'Pas mal…'; }
+  else                  { trophy = '📚'; title = 'Continuez à réviser !'; }
+
+  document.getElementById('trophy').textContent = trophy;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('score-big').textContent = pct + '%';
+  document.getElementById('score-label').textContent = `${correct} bonne${correct > 1 ? 's' : ''} réponse${correct > 1 ? 's' : ''} sur ${total}`;
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent = wrong;
+
+  document.getElementById('progress-fill').style.width = '100%';
+  showScreen('screen-result');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────
+initTheme();
+loadData();
+</script>
+</body>
+</html>
