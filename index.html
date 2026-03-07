@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GéoQuiz — Capitales du monde</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg:        #30191E;
+      --c-surface:   #4F3439;
+      --c-card:      #3d2228;
+      --c-border:    #6B4C51;
+      --c-accent:    #e94560;
+      --c-accent2:   #f7b2be;
+      --c-text:      #f5e6e8;
+      --c-muted:     #c9a0a7;
+      --c-correct:   #4dbb87;
+      --c-wrong:     #e94560;
+      --c-warn:      #f0a500;
+      --c-shadow:    rgba(233,69,96,0.18);
+      --font-display:'Playfair Display', Georgia, serif;
+      --font-body:   'DM Sans', sans-serif;
+      --radius:       14px;
+      --transition:   0.28s cubic-bezier(.4,0,.2,1);
+    }
+    [data-theme="light"] {
+      --c-bg:      #fdf6f0; --c-surface: #ffffff; --c-card: #fff8f5;
+      --c-border:  #e8d5cc; --c-accent:  #c0392b; --c-accent2: #e8846f;
+      --c-text:    #2c1a14; --c-muted:   #8a5e56; --c-correct: #27ae60;
+      --c-wrong:   #c0392b; --c-warn: #d4840a;    --c-shadow: rgba(192,57,43,0.12);
+    }
+    [data-theme="dark"] {
+      --c-bg:      #0d1117; --c-surface: #161b22; --c-card: #1c2128;
+      --c-border:  #30363d; --c-accent:  #58a6ff; --c-accent2: #a5d0ff;
+      --c-text:    #e6edf3; --c-muted:   #8b949e; --c-correct: #3fb950;
+      --c-wrong:   #f85149; --c-warn: #d29922;    --c-shadow: rgba(88,166,255,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--c-bg); color: var(--c-text);
+      font-family: var(--font-body); min-height: 100vh; overflow-x: hidden;
+      transition: background var(--transition), color var(--transition);
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, color-mix(in srgb, var(--c-accent) 8%, transparent) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, color-mix(in srgb, var(--c-border) 15%, transparent) 0%, transparent 60%);
+    }
+    .app { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* HEADER */
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; }
+    .logo { font-family: var(--font-display); font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em; }
+    .logo span { color: var(--c-accent); }
+    .header-controls { display: flex; gap: .6rem; align-items: center; }
+    .theme-btn {
+      background: var(--c-surface); border: 1.5px solid var(--c-border); color: var(--c-muted);
+      width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center; transition: all var(--transition);
+    }
+    .theme-btn:hover { color: var(--c-accent); border-color: var(--c-accent); }
+    .chrome-badge {
+      font-size: .7rem; font-weight: 600;
+      background: color-mix(in srgb, var(--c-accent) 18%, transparent);
+      color: var(--c-accent2); padding: .25rem .6rem; border-radius: 999px;
+      letter-spacing: .04em; border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+    }
+
+    /* SCORE BAR */
+    .score-bar {
+      display: flex; gap: 1rem; margin-bottom: 2rem;
+      font-size: .82rem; font-weight: 500; letter-spacing: .03em; color: var(--c-muted); text-transform: uppercase;
+    }
+    .score-bar span { color: var(--c-text); font-size: 1rem; font-weight: 700; }
+
+    /* CARD */
+    .card {
+      background: var(--c-surface); border: 1.5px solid var(--c-border);
+      border-radius: var(--radius); padding: 2.2rem 2.4rem;
+      box-shadow: 0 4px 32px var(--c-shadow);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    /* MENU */
+    #screen-menu h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+    .subtitle { font-size: .9rem; color: var(--c-muted); margin-bottom: 2rem; line-height: 1.6; }
+    .section-label {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+      color: var(--c-muted); margin-bottom: .8rem;
+    }
+
+    /* GRILLES DE SÉLECTION */
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+    .sel-card {
+      background: var(--c-card); border: 2px solid var(--c-border);
+      border-radius: var(--radius); padding: 1.4rem 1.2rem;
+      cursor: pointer; transition: all var(--transition); text-align: center;
+    }
+    .sel-card:hover, .sel-card.selected {
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 18%, transparent);
+    }
+    .sel-card .icon { font-size: 1.8rem; margin-bottom: .5rem; }
+    .sel-card h3 { font-family: var(--font-display); font-size: .95rem; font-weight: 700; margin-bottom: .25rem; }
+    .sel-card p { font-size: .75rem; color: var(--c-muted); line-height: 1.4; }
+
+    /* BOUTONS */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .85rem 2rem; border-radius: 999px;
+      font-family: var(--font-body); font-size: .9rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all var(--transition); letter-spacing: .02em;
+    }
+    .btn-primary {
+      background: var(--c-accent); color: #fff;
+      box-shadow: 0 4px 18px color-mix(in srgb, var(--c-accent) 35%, transparent);
+    }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 24px color-mix(in srgb, var(--c-accent) 45%, transparent); }
+    .btn-ghost { background: transparent; color: var(--c-muted); border: 1.5px solid var(--c-border); }
+    .btn-ghost:hover { color: var(--c-text); border-color: var(--c-accent); }
+    .btn-warn { background: var(--c-warn); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--c-warn) 30%, transparent); }
+    .btn-warn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn:disabled { opacity: .45; pointer-events: none; }
+    .btn-full { width: 100%; }
+
+    /* QUIZ */
+    .progress-wrap { height: 4px; background: var(--c-border); border-radius: 999px; overflow: hidden; margin-bottom: 2rem; }
+    .progress-fill { height: 100%; background: var(--c-accent); border-radius: 999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+
+    .diff-badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      padding: .22rem .65rem; border-radius: 999px; margin-bottom: 1.2rem;
+    }
+    .diff-badge.easy { background: color-mix(in srgb, var(--c-correct) 15%, transparent); color: var(--c-correct); }
+    .diff-badge.hard { background: color-mix(in srgb, var(--c-warn) 15%, transparent); color: var(--c-warn); }
+
+    .question-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--c-muted); margin-bottom: .8rem; }
+    .question-text { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; line-height: 1.25; margin-bottom: .4rem; }
+    .question-hint { font-size: .8rem; color: var(--c-muted); margin-bottom: 1.8rem; }
+
+    /* QCM */
+    .answers { display: grid; gap: .8rem; }
+    .answer-btn {
+      background: var(--c-card); border: 2px solid var(--c-border);
+      border-radius: var(--radius); padding: 1rem 1.4rem; text-align: left; cursor: pointer;
+      font-family: var(--font-body); font-size: .95rem; font-weight: 500;
+      color: var(--c-text); transition: all var(--transition); position: relative; overflow: hidden;
+    }
+    .answer-btn::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+      background: color-mix(in srgb, var(--c-accent) 12%, transparent); transition: width var(--transition);
+    }
+    .answer-btn:hover:not(:disabled)::before { width: 100%; }
+    .answer-btn:hover:not(:disabled) { border-color: var(--c-accent); }
+    .answer-btn.correct { border-color: var(--c-correct); background: color-mix(in srgb, var(--c-correct) 12%, var(--c-card)); color: var(--c-correct); }
+    .answer-btn.wrong   { border-color: var(--c-wrong);   background: color-mix(in srgb, var(--c-wrong)   12%, var(--c-card)); color: var(--c-wrong); }
+    .answer-btn .letter {
+      display: inline-block; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+      background: var(--c-border); font-size: .7rem; font-weight: 700;
+      line-height: 1.6rem; text-align: center; margin-right: .6rem; vertical-align: middle;
+    }
+
+    /* SAISIE DIFFICILE */
+    .type-zone { display: flex; flex-direction: column; gap: .85rem; }
+    .type-input {
+      width: 100%; padding: 1rem 1.4rem; font-size: 1.05rem; font-family: var(--font-body);
+      background: var(--c-card); border: 2px solid var(--c-border); border-radius: var(--radius);
+      color: var(--c-text); outline: none; transition: border-color var(--transition), background var(--transition);
+    }
+    .type-input:focus  { border-color: var(--c-accent); }
+    .type-input.i-ok   { border-color: var(--c-correct); background: color-mix(in srgb, var(--c-correct) 10%, var(--c-card)); }
+    .type-input.i-near { border-color: var(--c-warn);    background: color-mix(in srgb, var(--c-warn)    10%, var(--c-card)); }
+    .type-input.i-bad  { border-color: var(--c-wrong);   background: color-mix(in srgb, var(--c-wrong)   10%, var(--c-card)); }
+    .type-subhint { font-size: .78rem; color: var(--c-muted); min-height: 1.2em; }
+
+    /* FEEDBACK */
+    .feedback {
+      margin-top: 1.4rem; padding: 1.2rem 1.4rem;
+      background: color-mix(in srgb, var(--c-accent) 8%, var(--c-card));
+      border-left: 3px solid var(--c-accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      animation: slideUp .3s ease;
+    }
+    .feedback-status { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+    .feedback-status.ok   { color: var(--c-correct); }
+    .feedback-status.near { color: var(--c-warn); }
+    .feedback-status.ko   { color: var(--c-wrong); }
+    .feedback-funfact { font-size: .88rem; line-height: 1.6; color: var(--c-muted); }
+    .feedback-funfact strong { color: var(--c-text); }
+    .next-row { display: flex; justify-content: flex-end; margin-top: 1.2rem; }
+
+    /* RÉSULTATS */
+    #screen-result { text-align: center; }
+    .trophy { font-size: 4rem; margin-bottom: 1rem; }
+    #screen-result h2 { font-family: var(--font-display); font-size: 2.2rem; font-weight: 900; margin-bottom: .5rem; }
+    .score-big { font-size: 4rem; font-weight: 900; color: var(--c-accent); font-family: var(--font-display); line-height: 1; margin: 1rem 0; }
+    .score-label { color: var(--c-muted); font-size: .9rem; margin-bottom: 2rem; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-bottom: 1.5rem; }
+    .result-stat { background: var(--c-card); border: 1.5px solid var(--c-border); border-radius: var(--radius); padding: 1rem; }
+    .result-stat .val { font-size: 1.8rem; font-weight: 800; color: var(--c-accent); }
+    .result-stat .lbl { font-size: .75rem; color: var(--c-muted); margin-top: .2rem; }
+    .result-actions { display: flex; gap: .8rem; justify-content: center; flex-wrap: wrap; }
+
+    /* RÉVISION */
+    #screen-review h2 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; margin-bottom: .4rem; }
+    #screen-review .subtitle { margin-bottom: 1.5rem; }
+    .review-list { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
+    .review-item {
+      background: var(--c-card); border: 1.5px solid var(--c-border);
+      border-radius: var(--radius); padding: 1.2rem 1.4rem;
+      animation: slideUp .3s ease both;
+    }
+    .review-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .7rem; }
+    .review-question { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
+    .rev-tag {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      padding: .2rem .55rem; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+    }
+    .tag-wrong { background: color-mix(in srgb, var(--c-wrong) 15%, transparent); color: var(--c-wrong); }
+    .tag-near  { background: color-mix(in srgb, var(--c-warn)  15%, transparent); color: var(--c-warn); }
+    .review-body { font-size: .85rem; line-height: 1.7; }
+    .rev-yours   { color: var(--c-wrong); }
+    .rev-correct { color: var(--c-correct); font-weight: 600; }
+    .rev-fact { margin-top: .6rem; font-size: .82rem; color: var(--c-muted); border-top: 1px solid var(--c-border); padding-top: .6rem; line-height: 1.5; }
+    .review-actions { display: flex; gap: .8rem; flex-wrap: wrap; }
+
+    /* LOADING */
+    #loading { text-align: center; padding: 4rem 0; color: var(--c-muted); font-size: .9rem; }
+    .spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--c-border); border-top-color: var(--c-accent); animation: spin .8s linear infinite; margin: 0 auto 1rem; }
+
+    /* ANIMATIONS */
+    @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn  { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0); } }
+    @keyframes spin    { to { transform:rotate(360deg); } }
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn .35s ease; }
+
+    @media (max-width: 500px) {
+      .mode-grid, .diff-grid { grid-template-columns: 1fr; }
+      .question-text { font-size: 1.4rem; }
+      .app { padding: 1.2rem 1rem 3rem; }
+      .card { padding: 1.6rem 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">Géo<span>Quiz</span></div>
+    <div class="header-controls" id="header-controls"></div>
+  </header>
+
+  <div id="loading"><div class="spinner"></div>Chargement des données…</div>
+
+  <!-- ══ MENU ══════════════════════════════════════════════════════════ -->
+  <div id="screen-menu" class="screen card">
+    <h2>Capitales du monde</h2>
+    <p class="subtitle">Testez vos connaissances et découvrez des anecdotes insolites après chaque réponse.</p>
+
+    <div class="section-label">Direction du quiz</div>
+    <div class="mode-grid">
+      <div class="sel-card selected" data-group="mode" data-val="pays-capitale" onclick="selectCard(this)">
+        <div class="icon">🌍</div>
+        <h3>Pays → Capitale</h3>
+        <p>On vous donne un pays, trouvez sa capitale</p>
+      </div>
+      <div class="sel-card" data-group="mode" data-val="capitale-pays" onclick="selectCard(this)">
+        <div class="icon">🏛️</div>
+        <h3>Capitale → Pays</h3>
+        <p>On vous donne une capitale, trouvez son pays</p>
+      </div>
+    </div>
+
+    <div class="section-label">Difficulté</div>
+    <div class="diff-grid">
+      <div class="sel-card selected" data-group="diff" data-val="easy" onclick="selectCard(this)">
+        <div class="icon">🟢</div>
+        <h3>Facile — QCM</h3>
+        <p>Choisissez parmi 4 propositions</p>
+      </div>
+      <div class="sel-card" data-group="diff" data-val="hard" onclick="selectCard(this)">
+        <div class="icon">🔴</div>
+        <h3>Difficile — Saisie</h3>
+        <p>Tapez la réponse (fautes tolérées)</p>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="startQuiz()">Commencer le quiz →</button>
+  </div>
+
+  <!-- ══ QUIZ ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-quiz" class="screen">
+    <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="score-bar">
+      <div>Question <span id="q-num">1</span>&thinsp;/&thinsp;<span id="q-total">15</span></div>
+      <div>✓&thinsp;<span id="q-correct">0</span></div>
+      <div>✗&thinsp;<span id="q-wrong">0</span></div>
+    </div>
+    <div class="card">
+      <div id="diff-badge" class="diff-badge easy"></div>
+      <div class="question-label" id="q-label"></div>
+      <div class="question-text"  id="q-text"></div>
+      <div class="question-hint"  id="q-hint"></div>
+      <div id="answers"></div>
+      <div id="feedback-zone"></div>
+      <div class="next-row" id="next-row" style="display:none">
+        <button class="btn btn-primary" onclick="nextQuestion()">Question suivante →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RÉSULTATS ══════════════════════════════════════════════════════ -->
+  <div id="screen-result" class="screen card">
+    <div class="trophy" id="r-trophy"></div>
+    <h2 id="r-title"></h2>
+    <div class="score-big"   id="r-pct"></div>
+    <div class="score-label" id="r-label"></div>
+    <div class="result-grid">
+      <div class="result-stat"><div class="val" id="r-correct"></div><div class="lbl">Bonnes réponses</div></div>
+      <div class="result-stat"><div class="val" id="r-wrong"></div><div class="lbl">Erreurs</div></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="restartSameMode()">Rejouer</button>
+      <button class="btn btn-warn"    id="btn-review" onclick="showReview()" style="display:none">🔍 Revoir mes erreurs</button>
+      <button class="btn btn-ghost"   onclick="goMenu()">← Menu</button>
+    </div>
+  </div>
+
+  <!-- ══ RÉVISION ═══════════════════════════════════════════════════════ -->
+  <div id="screen-review" class="screen card">
+    <h2>Révision des erreurs</h2>
+    <p class="subtitle" id="rev-subtitle"></p>
+    <div class="review-list" id="review-list"></div>
+    <div class="review-actions">
+      <button class="btn btn-primary" onclick="restartSameMode()">Rejouer</button>
+      <button class="btn btn-ghost"   onclick="showScreen('screen-result')">← Résultats</button>
+      <button class="btn btn-ghost"   onclick="goMenu()">← Menu</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  THÈME
+// ══════════════════════════════════════════════════════════════════════
+const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+function initTheme() {
+  const el = document.getElementById('header-controls');
+  if (isChrome) {
+    document.documentElement.removeAttribute('data-theme');
+    el.innerHTML = `<span class="chrome-badge">🍷 Chrome Edition</span>`;
+  } else {
+    const saved = localStorage.getItem('geoquiz-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    el.innerHTML = `<button class="theme-btn" id="theme-btn" title="Changer de thème" onclick="toggleTheme()">${saved==='dark'?'☀️':'🌙'}</button>`;
+  }
+}
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('geoquiz-theme', next);
+  document.getElementById('theme-btn').textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CSV
+// ══════════════════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const rows = [];
+  for (const line of text.trim().split('\n').slice(1)) {
+    const cols = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur);
+    if (cols[0]?.trim()) rows.push({
+      pays:     cols[0].trim(),
+      capitale: cols[1]?.trim() || '',
+      facts:    [cols[2],cols[3],cols[4]].map(f=>f?.trim()||'').filter(Boolean)
+    });
+  }
+  return rows;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LEVENSHTEIN + TOLÉRANCE
+// ══════════════════════════════════════════════════════════════════════
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, (_,i) => Array.from({length:n+1}, (_,j) => i===0?j:j===0?i:0));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+function normalize(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-'\s]/g,'').trim();
+}
+// Retourne 'correct' | 'close' | 'wrong'
+function evalAnswer(typed, answer) {
+  const t = normalize(typed), a = normalize(answer);
+  if (t === a) return 'correct';
+  const thr = a.length <= 5 ? 1 : 2;
+  return levenshtein(t, a) <= thr ? 'close' : 'wrong';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  ÉTAT GLOBAL
+// ══════════════════════════════════════════════════════════════════════
+let data=[], mode='pays-capitale', diff='easy';
+let questions=[], qIndex=0, correct=0, wrong=0, mistakes=[];
+const TOTAL_Q = 15;
+
+// ══════════════════════════════════════════════════════════════════════
+//  CHARGEMENT
+// ══════════════════════════════════════════════════════════════════════
+async function loadData() {
+  try {
+    const r = await fetch('pays_capitales_funfacts.csv');
+    if (!r.ok) throw new Error();
+    data = parseCSV(await r.text());
+    document.getElementById('loading').style.display = 'none';
+    showScreen('screen-menu');
+  } catch {
+    document.getElementById('loading').innerHTML =
+      `<p style="color:var(--c-wrong)">❌ Impossible de charger le CSV.<br>
+       Placez <code>pays_capitales_funfacts.csv</code> dans le même dossier que <code>index.html</code>.</p>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  UTILITAIRES
+// ══════════════════════════════════════════════════════════════════════
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function pickFact(item){const f=item.facts.filter(Boolean);return f.length?f[Math.floor(Math.random()*f.length)]:null;}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MENU — sélection des cartes
+// ══════════════════════════════════════════════════════════════════════
+function selectCard(el) {
+  const group = el.dataset.group;
+  document.querySelectorAll(`.sel-card[data-group="${group}"]`).forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  if (group === 'mode') mode = el.dataset.val;
+  if (group === 'diff') diff = el.dataset.val;
+}
+function goMenu() { showScreen('screen-menu'); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  CONSTRUCTION DES QUESTIONS
+// ══════════════════════════════════════════════════════════════════════
+function buildQuestions() {
+  const pool = data.filter(d => d.capitale); // ignorer entrées sans capitale
+  questions = shuffle(pool).slice(0, TOTAL_Q).map(item => {
+    const isP2C = mode === 'pays-capitale';
+    const question = isP2C ? item.pays     : item.capitale;
+    const answer   = isP2C ? item.capitale : item.pays;
+    const bad = shuffle(pool.filter(d=>(isP2C?d.capitale:d.pays)!==answer)).slice(0,3).map(d=>isP2C?d.capitale:d.pays);
+    return { question, answer, choices: shuffle([answer,...bad]), fact: pickFact(item) };
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  DÉMARRAGE / REJEU
+// ══════════════════════════════════════════════════════════════════════
+function startQuiz() {
+  correct=0; wrong=0; qIndex=0; mistakes=[];
+  buildQuestions();
+  document.getElementById('q-total').textContent = questions.length;
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+function restartSameMode() { startQuiz(); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDU QUESTION
+// ══════════════════════════════════════════════════════════════════════
+function renderQuestion() {
+  const q = questions[qIndex];
+  document.getElementById('q-num').textContent = qIndex+1;
+  document.getElementById('q-correct').textContent = correct;
+  document.getElementById('q-wrong').textContent   = wrong;
+  document.getElementById('progress-fill').style.width = (qIndex/questions.length*100)+'%';
+
+  const badge = document.getElementById('diff-badge');
+  badge.className = 'diff-badge '+(diff==='easy'?'easy':'hard');
+  badge.textContent = diff==='easy' ? '🟢 Mode facile — QCM' : '🔴 Mode difficile — Saisie libre';
+
+  document.getElementById('q-label').textContent = mode==='pays-capitale'
+    ? 'Quelle est la capitale de…' : 'De quel pays est-ce la capitale ?';
+  document.getElementById('q-text').textContent = q.question;
+  document.getElementById('q-hint').textContent = diff==='easy'
+    ? 'Choisissez parmi les 4 propositions.'
+    : 'Tapez votre réponse (1 ou 2 fautes de frappe sont tolérées).';
+
+  document.getElementById('feedback-zone').innerHTML = '';
+  document.getElementById('next-row').style.display  = 'none';
+
+  diff === 'easy' ? renderQCM(q) : renderTyping(q);
+}
+
+// ── QCM ──────────────────────────────────────────────────────────────
+const LETTERS = ['A','B','C','D'];
+function renderQCM(q) {
+  document.getElementById('answers').innerHTML = q.choices.map((c,i)=>`
+    <button class="answer-btn" onclick="submitQCM(this,${JSON.stringify(c)})">
+      <span class="letter">${LETTERS[i]}</span>${c}
+    </button>`).join('');
+}
+function submitQCM(btn, chosen) {
+  const q = questions[qIndex];
+  const ok = chosen === q.answer;
+  ok ? correct++ : (wrong++, recordMistake(q, chosen, 'wrong'));
+  updateScoreDisplay();
+  document.querySelectorAll('.answer-btn').forEach(b=>{
+    b.disabled=true;
+    const lbl = b.textContent.replace(/^[A-D]/,'').trim();
+    if (lbl===q.answer)       b.classList.add('correct');
+    else if (b===btn && !ok)  b.classList.add('wrong');
+  });
+  showFeedback(ok?'correct':'wrong', q.answer, chosen, q.fact);
+  armNextBtn();
+}
+
+// ── SAISIE ────────────────────────────────────────────────────────────
+function renderTyping(q) {
+  document.getElementById('answers').innerHTML = `
+    <div class="type-zone">
+      <input class="type-input" id="type-input" type="text"
+             placeholder="Votre réponse…" autocomplete="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter')submitTyped()">
+      <div class="type-subhint" id="type-subhint">↵ Entrée ou bouton pour valider</div>
+      <div><button class="btn btn-primary" id="btn-validate" onclick="submitTyped()">Valider</button></div>
+    </div>`;
+  document.getElementById('type-input').focus();
+}
+function submitTyped() {
+  const inp = document.getElementById('type-input');
+  if (!inp || inp.disabled) return;
+  const typed = inp.value.trim();
+  if (!typed) { inp.focus(); return; }
+
+  const q = questions[qIndex];
+  const status = evalAnswer(typed, q.answer);
+  const ok = status !== 'wrong';
+
+  inp.disabled = true;
+  const validateBtn = document.getElementById('btn-validate');
+  if (validateBtn) validateBtn.disabled = true;
+  inp.classList.add(status==='correct'?'i-ok':status==='close'?'i-near':'i-bad');
+
+  ok ? correct++ : (wrong++, recordMistake(q, typed, status));
+  updateScoreDisplay();
+
+  const subhint = document.getElementById('type-subhint');
+  if (status==='close' && subhint)
+    subhint.innerHTML = `<span style="color:var(--c-warn)">⚠️ Orthographe exacte : <strong style="color:var(--c-text)">${q.answer}</strong></span>`;
+  else if (subhint) subhint.textContent = '';
+
+  showFeedback(status, q.answer, typed, q.fact);
+  armNextBtn();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  FEEDBACK
+// ══════════════════════════════════════════════════════════════════════
+function showFeedback(status, answer, typed, fact) {
+  const msgs = {
+    correct: { cls:'ok',   txt:'✓ Bonne réponse !' },
+    close:   { cls:'near', txt:`⚠️ Presque — orthographe exacte : <strong>${answer}</strong>` },
+    wrong:   { cls:'ko',   txt:`✗ La bonne réponse était : <strong>${answer}</strong>` }
+  };
+  const {cls,txt} = msgs[status];
+  document.getElementById('feedback-zone').innerHTML = `
+    <div class="feedback">
+      <div class="feedback-status ${cls}">${txt}</div>
+      ${fact?`<div class="feedback-funfact"><strong>Le saviez-vous ?</strong> ${fact}</div>`:''}
+    </div>`;
+}
+
+function armNextBtn() {
+  const row = document.getElementById('next-row');
+  row.style.display = 'flex';
+  row.querySelector('button').textContent =
+    qIndex===questions.length-1 ? 'Voir les résultats 🏁' : 'Question suivante →';
+}
+function updateScoreDisplay() {
+  document.getElementById('q-correct').textContent = correct;
+  document.getElementById('q-wrong').textContent   = wrong;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  ENREGISTREMENT ERREURS
+// ══════════════════════════════════════════════════════════════════════
+function recordMistake(q, yourAnswer, status) {
+  mistakes.push({ question:q.question, answer:q.answer, yourAnswer, fact:q.fact, status });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════════════
+function nextQuestion() {
+  qIndex++;
+  qIndex >= questions.length ? showResults() : renderQuestion();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RÉSULTATS
+// ══════════════════════════════════════════════════════════════════════
+function showResults() {
+  const total = questions.length;
+  const pct   = Math.round(correct/total*100);
+  const tiers = [[0,'📚','Continuez à réviser !'],[40,'🥉','Pas mal…'],[60,'🥈','Bien joué !'],[80,'🥇','Excellent !'],[100,'🏆','Parfait !']];
+  const [,trophy,title] = tiers.filter(([t])=>pct>=t).pop();
+
+  document.getElementById('r-trophy').textContent  = trophy;
+  document.getElementById('r-title').textContent   = title;
+  document.getElementById('r-pct').textContent     = pct+'%';
+  document.getElementById('r-label').textContent   = `${correct} bonne${correct>1?'s':''} réponse${correct>1?'s':''} sur ${total}`;
+  document.getElementById('r-correct').textContent = correct;
+  document.getElementById('r-wrong').textContent   = wrong;
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('btn-review').style.display = mistakes.length ? 'inline-flex' : 'none';
+  showScreen('screen-result');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RÉVISION
+// ══════════════════════════════════════════════════════════════════════
+function showReview() {
+  document.getElementById('rev-subtitle').textContent =
+    `${mistakes.length} erreur${mistakes.length>1?'s':''} à revoir — la bonne réponse est indiquée en vert.`;
+
+  document.getElementById('review-list').innerHTML = mistakes.map((m,i)=>`
+    <div class="review-item" style="animation-delay:${i*.06}s">
+      <div class="review-item-top">
+        <div class="review-question">${m.question}</div>
+        <span class="rev-tag ${m.status==='close'?'tag-near':'tag-wrong'}">
+          ${m.status==='close'?'⚠️ Presque':'✗ Faux'}
+        </span>
+      </div>
+      <div class="review-body">
+        ${m.status!=='close'&&m.yourAnswer
+          ?`<div class="rev-yours">Votre réponse : ${m.yourAnswer}</div>`:''}
+        <div class="rev-correct">✓ Bonne réponse : ${m.answer}</div>
+      </div>
+      ${m.fact?`<div class="rev-fact">💡 ${m.fact}</div>`:''}
+    </div>`).join('');
+
+  showScreen('screen-review');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════
+initTheme();
+loadData();
+</script>
+</body>
+</html>
