@@ -514,10 +514,15 @@ function renderQuestion() {
 // ── QCM ──────────────────────────────────────────────────────────────
 const LETTERS = ['A','B','C','D'];
 function renderQCM(q) {
-  document.getElementById('answers').innerHTML = q.choices.map((c,i)=>`
-    <button class="answer-btn" onclick="submitQCM(this,${JSON.stringify(c)})">
-      <span class="letter">${LETTERS[i]}</span>${c}
-    </button>`).join('');
+  const wrap = document.getElementById('answers');
+  wrap.innerHTML = '';
+  q.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = `<span class="letter">${LETTERS[i]}</span>${c}`;
+    btn.addEventListener('click', () => submitQCM(btn, c));
+    wrap.appendChild(btn);
+  });
 }
 function submitQCM(btn, chosen) {
   const q = questions[qIndex];
