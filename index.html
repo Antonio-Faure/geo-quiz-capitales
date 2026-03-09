@@ -141,17 +141,18 @@
     .diff-badge.easy { background: color-mix(in srgb, var(--c-correct) 15%, transparent); color: var(--c-correct); }
     .diff-badge.hard { background: color-mix(in srgb, var(--c-warn) 15%, transparent); color: var(--c-warn); }
 
-    .question-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--c-muted); margin-bottom: .8rem; }
-    .question-text { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; line-height: 1.25; margin-bottom: .4rem; }
-    .question-hint { font-size: .8rem; color: var(--c-muted); margin-bottom: 1.8rem; }
+    .question-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--c-muted); margin-bottom: .8rem; text-align: center; }
+    .question-text { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; line-height: 1.25; margin-bottom: .4rem; text-align: center; }
+    .question-hint { font-size: .8rem; color: var(--c-muted); margin-bottom: 1.8rem; text-align: center; }
 
     /* QCM */
     .answers {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: .8rem;
-}
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: .8rem;
+      height: 260px;
+    }
     .answer-btn {
       background: var(--c-card); border: 2px solid var(--c-border);
       border-radius: var(--radius); padding: 1rem 1.2rem;
@@ -159,7 +160,7 @@
       font-family: var(--font-body); font-size: .9rem; font-weight: 500;
       color: var(--c-text); transition: all var(--transition); position: relative; overflow: hidden;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 72px; gap: .3rem;
+      width: 100%; height: 100%; gap: .3rem;
     }
     .answer-btn::before {
       content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
@@ -253,7 +254,7 @@
 
     @media (max-width: 500px) {
       .mode-grid, .diff-grid { grid-template-columns: 1fr; }
-      .answers { grid-template-columns: 1fr; }
+      .answers { grid-template-columns: 1fr; height: 520px; }
       .question-text { font-size: 1.4rem; }
       .app { padding: 1.2rem 1rem 3rem; }
       .card { padding: 1.6rem 1.2rem; }
