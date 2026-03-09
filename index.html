@@ -146,12 +146,20 @@
     .question-hint { font-size: .8rem; color: var(--c-muted); margin-bottom: 1.8rem; }
 
     /* QCM */
-    .answers { display: grid; gap: .8rem; }
+    .answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: .8rem;
+}
     .answer-btn {
       background: var(--c-card); border: 2px solid var(--c-border);
-      border-radius: var(--radius); padding: 1rem 1.4rem; text-align: left; cursor: pointer;
-      font-family: var(--font-body); font-size: .95rem; font-weight: 500;
+      border-radius: var(--radius); padding: 1rem 1.2rem;
+      text-align: center; cursor: pointer;
+      font-family: var(--font-body); font-size: .9rem; font-weight: 500;
       color: var(--c-text); transition: all var(--transition); position: relative; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 72px; gap: .3rem;
     }
     .answer-btn::before {
       content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
@@ -162,9 +170,10 @@
     .answer-btn.correct { border-color: var(--c-correct); background: color-mix(in srgb, var(--c-correct) 12%, var(--c-card)); color: var(--c-correct); }
     .answer-btn.wrong   { border-color: var(--c-wrong);   background: color-mix(in srgb, var(--c-wrong)   12%, var(--c-card)); color: var(--c-wrong); }
     .answer-btn .letter {
-      display: inline-block; width: 1.6rem; height: 1.6rem; border-radius: 50%;
-      background: var(--c-border); font-size: .7rem; font-weight: 700;
-      line-height: 1.6rem; text-align: center; margin-right: .6rem; vertical-align: middle;
+      display: flex; align-items: center; justify-content: center;
+      width: 1.5rem; height: 1.5rem; border-radius: 50%;
+      background: var(--c-border); font-size: .65rem; font-weight: 700;
+      flex-shrink: 0;
     }
 
     /* SAISIE DIFFICILE */
@@ -244,6 +253,7 @@
 
     @media (max-width: 500px) {
       .mode-grid, .diff-grid { grid-template-columns: 1fr; }
+      .answers { grid-template-columns: 1fr; }
       .question-text { font-size: 1.4rem; }
       .app { padding: 1.2rem 1rem 3rem; }
       .card { padding: 1.6rem 1.2rem; }
@@ -385,10 +395,17 @@ function parseCSV(text) {
       else cur += ch;
     }
     cols.push(cur);
-    if (cols[0]?.trim()) rows.push({
-      pays:     cols[0].trim(),
-      capitale: cols[1]?.trim() || '',
-      facts:    [cols[2],cols[3],cols[4]].map(f=>f?.trim()||'').filter(Boolean)
+    if (!cols[0]?.trim()) continue;
+    const rawCap = cols[1]?.trim() || '';
+    // Sépare les multi-capitales : virgule, " ou ", " / "
+    const capitales = rawCap
+      .split(/,|\s+ou\s+|\//)
+      .map(c => c.trim()).filter(Boolean);
+    rows.push({
+      pays:      cols[0].trim(),
+      capitale:  capitales[0] || '',   // principale pour les questions
+      capitales,                        // toutes pour la validation
+      facts:     [cols[2],cols[3],cols[4]].map(f=>f?.trim()||'').filter(Boolean)
     });
   }
   return rows;
@@ -462,13 +479,18 @@ function goMenu() { showScreen('screen-menu'); }
 //  CONSTRUCTION DES QUESTIONS
 // ══════════════════════════════════════════════════════════════════════
 function buildQuestions() {
-  const pool = data.filter(d => d.capitale); // ignorer entrées sans capitale
+  const pool = data.filter(d => d.capitale);
   questions = shuffle(pool).slice(0, TOTAL_Q).map(item => {
     const isP2C = mode === 'pays-capitale';
-    const question = isP2C ? item.pays     : item.capitale;
-    const answer   = isP2C ? item.capitale : item.pays;
-    const bad = shuffle(pool.filter(d=>(isP2C?d.capitale:d.pays)!==answer)).slice(0,3).map(d=>isP2C?d.capitale:d.pays);
-    return { question, answer, choices: shuffle([answer,...bad]), fact: pickFact(item) };
+    const question  = isP2C ? item.pays      : item.capitale;
+    const answer    = isP2C ? item.capitale  : item.pays;
+    // Pour la validation : toutes les graphies acceptées
+    const allAnswers = isP2C ? item.capitales : [item.pays];
+    const bad = shuffle(pool.filter(d => {
+      const v = isP2C ? d.capitale : d.pays;
+      return !allAnswers.includes(v);
+    })).slice(0,3).map(d => isP2C ? d.capitale : d.pays);
+    return { question, answer, allAnswers, choices: shuffle([answer,...bad]), fact: pickFact(item) };
   });
 }
 
@@ -501,9 +523,11 @@ function renderQuestion() {
   document.getElementById('q-label').textContent = mode==='pays-capitale'
     ? 'Quelle est la capitale de…' : 'De quel pays est-ce la capitale ?';
   document.getElementById('q-text').textContent = q.question;
+  const multiCap = q.allAnswers && q.allAnswers.length > 1;
+  const capNote = multiCap ? ` (${q.allAnswers.length} capitales acceptées)` : '';
   document.getElementById('q-hint').textContent = diff==='easy'
-    ? 'Choisissez parmi les 4 propositions.'
-    : 'Tapez votre réponse (1 ou 2 fautes de frappe sont tolérées).';
+    ? 'Choisissez parmi les 4 propositions.' + capNote
+    : 'Tapez votre réponse (1 ou 2 fautes de frappe sont tolérées).' + capNote;
 
   document.getElementById('feedback-zone').innerHTML = '';
   document.getElementById('next-row').style.display  = 'none';
@@ -519,23 +543,23 @@ function renderQCM(q) {
   q.choices.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'answer-btn';
-    btn.innerHTML = `<span class="letter">${LETTERS[i]}</span>${c}`;
+    btn._value = c;  // référence propre sans passer par le DOM
+    btn.innerHTML = `<span class="letter">${LETTERS[i]}</span><span class="btn-label">${c}</span>`;
     btn.addEventListener('click', () => submitQCM(btn, c));
     wrap.appendChild(btn);
   });
 }
 function submitQCM(btn, chosen) {
   const q = questions[qIndex];
-  const ok = chosen === q.answer;
+  const ok = q.allAnswers.includes(chosen);
   ok ? correct++ : (wrong++, recordMistake(q, chosen, 'wrong'));
   updateScoreDisplay();
   document.querySelectorAll('.answer-btn').forEach(b=>{
     b.disabled=true;
-    const lbl = b.textContent.replace(/^[A-D]/,'').trim();
-    if (lbl===q.answer)       b.classList.add('correct');
-    else if (b===btn && !ok)  b.classList.add('wrong');
+    if (q.allAnswers.includes(b._value)) b.classList.add('correct');
+    else if (b===btn && !ok)             b.classList.add('wrong');
   });
-  showFeedback(ok?'correct':'wrong', q.answer, chosen, q.fact);
+  showFeedback(ok?'correct':'wrong', q.answer, chosen, q.fact, q.allAnswers);
   armNextBtn();
 }
 
@@ -558,7 +582,13 @@ function submitTyped() {
   if (!typed) { inp.focus(); return; }
 
   const q = questions[qIndex];
-  const status = evalAnswer(typed, q.answer);
+  // Tester contre toutes les graphies acceptées, garder le meilleur résultat
+  let status = 'wrong';
+  for (const a of q.allAnswers) {
+    const s = evalAnswer(typed, a);
+    if (s === 'correct') { status = 'correct'; break; }
+    if (s === 'close')     status = 'close';
+  }
   const ok = status !== 'wrong';
 
   inp.disabled = true;
@@ -574,18 +604,21 @@ function submitTyped() {
     subhint.innerHTML = `<span style="color:var(--c-warn)">⚠️ Orthographe exacte : <strong style="color:var(--c-text)">${q.answer}</strong></span>`;
   else if (subhint) subhint.textContent = '';
 
-  showFeedback(status, q.answer, typed, q.fact);
+  showFeedback(status, q.answer, typed, q.fact, q.allAnswers);
   armNextBtn();
 }
 
 // ══════════════════════════════════════════════════════════════════════
 //  FEEDBACK
 // ══════════════════════════════════════════════════════════════════════
-function showFeedback(status, answer, typed, fact) {
+function showFeedback(status, answer, typed, fact, allAnswers) {
+  const answerDisplay = allAnswers && allAnswers.length > 1
+    ? allAnswers.join(' / ')
+    : answer;
   const msgs = {
     correct: { cls:'ok',   txt:'✓ Bonne réponse !' },
-    close:   { cls:'near', txt:`⚠️ Presque — orthographe exacte : <strong>${answer}</strong>` },
-    wrong:   { cls:'ko',   txt:`✗ La bonne réponse était : <strong>${answer}</strong>` }
+    close:   { cls:'near', txt:`⚠️ Presque — orthographe exacte : <strong>${answerDisplay}</strong>` },
+    wrong:   { cls:'ko',   txt:`✗ La bonne réponse était : <strong>${answerDisplay}</strong>` }
   };
   const {cls,txt} = msgs[status];
   document.getElementById('feedback-zone').innerHTML = `
@@ -610,7 +643,7 @@ function updateScoreDisplay() {
 //  ENREGISTREMENT ERREURS
 // ══════════════════════════════════════════════════════════════════════
 function recordMistake(q, yourAnswer, status) {
-  mistakes.push({ question:q.question, answer:q.answer, yourAnswer, fact:q.fact, status });
+  mistakes.push({ question:q.question, answer:q.answer, allAnswers:q.allAnswers, yourAnswer, fact:q.fact, status });
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -659,7 +692,7 @@ function showReview() {
       <div class="review-body">
         ${m.status!=='close'&&m.yourAnswer
           ?`<div class="rev-yours">Votre réponse : ${m.yourAnswer}</div>`:''}
-        <div class="rev-correct">✓ Bonne réponse : ${m.answer}</div>
+        <div class="rev-correct">✓ Bonne réponse : ${m.allAnswers && m.allAnswers.length > 1 ? m.allAnswers.join(" / ") : m.answer}</div>
       </div>
       ${m.fact?`<div class="rev-fact">💡 ${m.fact}</div>`:''}
     </div>`).join('');
