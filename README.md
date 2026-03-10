@@ -18,7 +18,7 @@ Accessible via GitHub Pages à l'URL de votre repo.
 
 ## Déploiement GitHub Pages
 
-Le site est disponible sur `https://antonio-faure.github.io/geo-quiz-capitales`
+Le site est disponible sur **[https://antonio-faure.github.io/geo-quiz-capitales](https://antonio-faure.github.io/geo-quiz-capitales)**
 
 ## Données
 
